@@ -1,24 +1,71 @@
-import logo from './logo.svg';
+import { useState, useEffect } from 'react';
 import './App.css';
+import Searchbar from './components/Searchbar'
+import Pokedex from './components/Pokedex';
+import { getPokemon, getPokemonData, searchPokemon } from "./utils/useHTTP"
 
-function App() {
+
+const App = () => {
+
+  const [pokemons, setPokemons] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+
+  const fetchPokemons = async () =>{
+    try {
+      setLoading(true)
+      const data = await getPokemon()
+      const promises = data.results.map(async(pokemon)=>{
+        return await getPokemonData(pokemon.url)
+      })
+      const results = await Promise.all(promises)
+      setPokemons(results)
+      setLoading(false)
+    } catch (error) {
+      
+    }
+  };
+
+  useEffect(()=>{
+    fetchPokemons();
+  }, []);
+
+  useEffect(()=>{
+    if (!searching){
+    fetchPokemons();
+    }
+  },[]);
+
+  const onSearch = async (pokemon) =>{
+    if (!pokemon){
+      return fetchPokemons();
+    }
+    setLoading(true);
+    setNotFound(false);
+    setSearching(true);
+    const result = await searchPokemon(pokemon);
+    if (!result){
+      setNotFound(true);
+      setLoading(false);
+      return
+    }else{
+      setPokemons([result])
+    }
+    setLoading(false);
+    setSearching(false)
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+    <Searchbar onSearch={onSearch}/>
+    { notFound ? (
+        <div className="nf-txt">We couldn't find that pokemon</div> 
+     ):(
+      <Pokedex pokemons={pokemons} loading={loading}/>   ) 
+    }
+    
+    </>
   );
 }
 
